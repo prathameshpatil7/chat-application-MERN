@@ -2,9 +2,14 @@ import { create } from "zustand";
 import { axiosInstance } from "../lib/axios.js";
 import toast from "react-hot-toast";
 import { io } from "socket.io-client";
-
+const getBaseUrl = () => {
+  if (import.meta.env.MODE === "development") {
+    return window.location.origin.replace(":5173", ":5001");
+  }
+  return "";  // In production, use relative path
+};
 const BASE_URL =
-  import.meta.env.MODE === "development" ? "http://localhost:5001" : "/";
+  import.meta.env.MODE === "development" ? `${getBaseUrl()}/api` : "/";
 
 export const useAuthStore = create((set, get) => ({
   authUser: null,

@@ -26,12 +26,22 @@ app.use(
 
 app.use("/api/auth", authRoutes);
 app.use("/api/messages", messageRoutes);
-
+// Sample GET /api endpoint
+app.get('/api', (req, res) => {
+  res.json({
+    message: 'Welcome to the API!',
+    status: 'success',
+  });
+});
 if (process.env.NODE_ENV === "production") {
-  app.use(express.static(path.join(__dirname, "../frontend/dist")));
+  console.log(
+    process.env.NODE_ENV,
+    path.join(__dirname, "../frontend", "build", "index.html")
+  );
+  app.use(express.static(path.join(__dirname, "../frontend/build")));
 
   app.get("*", (req, res) => {
-    res.sendFile(path.join(__dirname, "../frontend", "dist", "index.html"));
+    res.sendFile(path.join(__dirname, "../frontend", "build", "index.html"));
   });
 }
 
@@ -39,3 +49,4 @@ server.listen(PORT, () => {
   console.log("server is running on PORT:" + PORT);
   connectDB();
 });
+
