@@ -1,0 +1,57 @@
+version: "3.9"
+
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    environment:
+      - MONGODB_URI=mongodb://mongodb:27017/chatapp-docker
+      - JWT_SECRET=your_jwt_secret
+      - PORT=5001
+      - CLOUDINARY_CLOUD_NAME=dgijvqz3x
+      - CLOUDINARY_API_KEY=818792189738165
+      - CLOUDINARY_API_SECRET=7LvPsRuzv1yIgNxy0YbeZmXLOlY
+      - CLOUDINARY_URL=cloudinary://818792189738165:7LvPsRuzv1yIgNxy0YbeZmXLOlY@dgijvqz3
+      - NODE_ENV=production
+    ports:
+      - "5001:5001"
+    depends_on:
+      - mongodb
+    networks:
+      - chat-network
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    environment:
+      - MODE=production
+      - BACKEND_URL=http://backend:5001
+    ports:
+      - "81:80"
+    networks:
+      - chat-network
+    depends_on:
+      - backend
+   
+
+  mongodb:
+    image: mongo:latest
+    container_name: mongodb
+    volumes:
+      - mongodb_data:/data/db
+    ports:
+      - "27018:27017"
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=root
+      - MONGO_INITDB_ROOT_PASSWORD=admin
+    networks:
+      - chat-network
+
+volumes:
+  mongodb_data:
+
+networks:
+  chat-network:
+    driver: bridge

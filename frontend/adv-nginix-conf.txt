@@ -1,0 +1,138 @@
+# HTTPS Server Block
+server {
+    listen 443 ssl http2;
+    server_name localhost;
+
+    # SSL Configuration
+    ssl_certificate /etc/nginx/ssl/server.crt; # Path to SSL certificate
+    ssl_certificate_key /etc/nginx/ssl/server.key; # Path to SSL key
+    ssl_protocols TLSv1.2 TLSv1.3; # Use only secure TLS versions
+    ssl_prefer_server_ciphers on;
+    ssl_ciphers "EECDH+AESGCM:EDH+AESGCM:AES256+EECDH:AES256+EDH";
+    ssl_session_cache shared:SSL:10m;
+    ssl_session_timeout 1d;
+    ssl_session_tickets off;
+    ssl_stapling on;
+    ssl_stapling_verify on;
+
+    # Security Headers
+    add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
+
+    # Basic Setup
+    root /usr/share/nginx/html;
+    index index.html;
+
+    # SPA Support
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+
+    # Load Balancing for Backend
+    upstream backend_servers {
+        server backend1:5001; # First backend server
+        server backend2:5001; # Second backend server
+    }
+
+    # Proxy API Requests with Load Balancing
+    location /api/ {
+        proxy_pass http://backend_servers; # Load balance across multiple backends
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+        proxy_set_header Host $host;
+        proxy_cache_bypass $http_upgrade;
+    }
+
+    # Proxy WebSocket Requests
+    location /socket.io/ {
+        proxy_pass http://backend_servers; # Load balance WebSocket connections
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "Upgrade";
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_cache_bypass $http_upgrade;
+    }
+
+    # Rate Limiting
+    limit_req_zone $binary_remote_addr zone=api_limit:10m rate=10r/s;
+
+    # Apply Rate Limiting to API Requests
+    location /api/ {
+        limit_req zone=api_limit burst=20 nodelay;
+        proxy_pass http://backend_servers;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+        proxy_set_header Host $host;
+        proxy_cache_bypass $http_upgrade;
+    }
+
+    # Performance Optimizations
+    gzip on;
+    gzip_types text/plain text/css application/json application/javascript text/xml application/xml application/xml+rss text/javascript;
+    gzip_proxied any;
+    gzip_min_length 256;
+
+    # Logging
+    access_log /var/log/nginx/access.log;
+    error_log /var/log/nginx/error.log;
+
+    # Error Handling
+    error_page 404 /index.html; # SPA fallback for 404
+    error_page 500 502 503 504 /50x.html;
+    location = /50x.html {
+        root /usr/share/nginx/html;
+    }
+}
+
+# HTTP Redirect to HTTPS
+server {
+    listen 80;
+    server_name localhost;
+
+    # Redirect all HTTP traffic to HTTPS
+    return 301 https://$host$request_uri;
+}
+
+
+
+prompt:
+Generate a detailed NGINX configuration file for a web application with the following requirements:
+
+General Setup:
+The server listens on port 80 and responds to the domain example.com (use localhost as a placeholder if needed).
+Root directory for static files is /usr/share/nginx/html, with index.html as the default file.
+Include comments explaining each section of the configuration.
+Static File Serving:
+Serve static files efficiently.
+Support client-side routing for a Single Page Application (SPA), where all unmatched requests are redirected to index.html.
+API Proxy:
+Proxy requests starting with /api/ to a backend service running at http://backend:5001/api/.
+Ensure compatibility with HTTP/1.1 and set necessary headers like Upgrade, Connection, and Host.
+WebSocket Proxy:
+Proxy WebSocket requests starting with /socket.io/ to http://backend:5001/socket.io/.
+Include headers like X-Real-IP, X-Forwarded-For, and X-Forwarded-Proto for proper client information forwarding.
+Performance Optimizations:
+Enable gzip compression for MIME types such as JSON, JavaScript, CSS, and HTML.
+Set a minimum length for compression to avoid compressing small files.
+Security Enhancements:
+Add the following security headers:
+X-Frame-Options set to DENY to prevent clickjacking.
+X-Content-Type-Options set to nosniff to prevent MIME type sniffing.
+X-XSS-Protection set to 1; mode=block to mitigate cross-site scripting.
+Strict-Transport-Security set to enforce HTTPS (commented out if the server lacks SSL).
+Referrer-Policy set to no-referrer-when-downgrade.
+A basic Content Security Policy (CSP) that allows content from self and inline scripts/styles.
+Error Handling:
+Redirect 404 errors to index.html for SPA compatibility.
+Create a custom error page (50x.html) for 500, 502, 503, and 504 errors.
+CORS (Optional):
+Include commented-out headers for CORS, allowing cross-origin requests with Access-Control-Allow-Origin, Access-Control-Allow-Methods, and Access-Control-Allow-Headers.
+Logging:
+Log access requests to /var/log/nginx/access.log.
+Log errors to /var/log/nginx/error.log.
+Modular and Clean:
+Ensure the configuration is easy to read, modular, and extensible, following best practices for maintainability.
