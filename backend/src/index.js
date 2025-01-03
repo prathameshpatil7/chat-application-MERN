@@ -19,7 +19,7 @@ const __dirname = path.resolve();
 app.use(cookieParser());
 app.use(
   cors({
-    origin: "http://localhost:5173",
+	  origin: true,
     credentials: true,
   })
 );
@@ -27,6 +27,12 @@ app.use(
 app.use("/api/auth", authRoutes);
 app.use("/api/messages", messageRoutes);
 // Sample GET /api endpoint
+app.get('/api/test', (req, res) => {
+  res.json({
+    message: 'Welcome to the TEST API!',
+    status: 'success',
+  });
+});
 app.get('/api', (req, res) => {
   res.json({
     message: 'Welcome to the API!',
